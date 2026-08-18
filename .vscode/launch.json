@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-EnterpriseRagApplication<enterprise-rag>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "com.vish.enterprise_rag.EnterpriseRagApplication",
+            "projectName": "enterprise-rag",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
