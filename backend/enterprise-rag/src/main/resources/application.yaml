@@ -1,0 +1,24 @@
+#******* Application Configuration *********
+server:
+  servlet:
+    context-path: /enterprise-rag
+    encoding:
+      charset: UTF-8
+      enabled: true
+      force: true
+  port: 8800
+
+spring:
+  application:
+    name: enterprise-rag
+  profiles:
+    active: dev
+  # ***** Jpa Configuration *****
+  jpa:
+    properties:
+      hibernate:
+        query:
+          plan_cache_max_size: 64
+          plan_parameter_metadata_max_size: 32
+          in_clause_parameter_padding: true
+
