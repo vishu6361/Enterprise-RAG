@@ -1,0 +1,20 @@
+services:
+  postgres:
+    image: postgres:17-alpine
+    container_name: enterprise-rag-postgres
+    environment:
+      POSTGRES_DB: enterprise_rag
+      POSTGRES_USER: enterprise_rag
+      POSTGRES_PASSWORD: vishsqlpassword
+    ports:
+      - "5432:5432"
+    volumes:
+      - enterprise-rag-postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U enterprise_rag -d enterprise_rag"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  enterprise-rag-postgres-data:

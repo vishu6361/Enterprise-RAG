@@ -1,7 +1,5 @@
 package com.vish.enterprise_rag.entities;
 
-import java.time.LocalDateTime;
-
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -12,13 +10,15 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
 @Entity
 @Table(name = "conversations")
 @Data
-@ToString
-public class Conversation {
+@ToString(callSuper = true)
+@EqualsAndHashCode(callSuper = true)
+public class Conversation extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
@@ -33,13 +33,4 @@ public class Conversation {
     @ToString.Exclude
     @JoinColumn(name = "receiver_user_id", nullable = false)
     private User receiverUser;
-
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
-    @Column(name = "is_active", nullable = false)
-    private Boolean isActive;
 }

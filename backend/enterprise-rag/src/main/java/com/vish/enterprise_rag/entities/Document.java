@@ -1,7 +1,5 @@
 package com.vish.enterprise_rag.entities;
 
-import java.time.LocalDateTime;
-
 import com.vish.enterprise_rag.enums.DocumentStatus;
 
 import jakarta.persistence.Column;
@@ -20,6 +18,7 @@ import jakarta.persistence.Version;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
 @Entity
@@ -31,8 +30,9 @@ import lombok.ToString;
     )
 )
 @Data
-@ToString
-public class Document {
+@ToString(callSuper = true)
+@EqualsAndHashCode(callSuper = true)
+public class Document extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
@@ -61,15 +61,6 @@ public class Document {
     @NotBlank
     @Column(name = "content_hash", nullable = false)
     private String contentHash;
-
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
-    @Column(name = "is_active", nullable = false)
-    private Boolean isActive;
 
     @Column(name = "error_message")
     private String errorMessage;

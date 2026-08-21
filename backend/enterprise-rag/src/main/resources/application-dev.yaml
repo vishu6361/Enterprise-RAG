@@ -7,12 +7,21 @@ spring:
   # Database configuration
   datasource:
     read:
-      jdbcUrl:
-      username:
-      password:
-      maxPoolSize:
+      url: jdbc:postgresql://localhost:5432/enterprise_rag
+      username: enterprise_rag
+      password: ${POSTGRES_PASSWORD}
+      driver-class-name: org.postgresql.Driver
+      hikari:
+        maximum-pool-size: 5
     write:
-      jdbcUrl:
-      username:
-      password:
-      maxPoolSize:
+      jdbc-url: jdbc:postgresql://localhost:5432/enterprise_rag
+      username: enterprise_rag
+      password: ${POSTGRES_PASSWORD}
+      driver-class-name: org.postgresql.Driver
+      hikari:
+        maximum-pool-size: 5
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    open-in-view: false

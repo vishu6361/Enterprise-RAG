@@ -13,13 +13,15 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
 @Entity
 @Table(name = "audit_logs")
 @Data
-@ToString
-public class AuditLog {
+@ToString(callSuper = true)
+@EqualsAndHashCode(callSuper = true)
+public class AuditLog extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false, updatable = false)
@@ -39,17 +41,11 @@ public class AuditLog {
     private Long tableId;
 
     @Column(name = "user_id", nullable = false)
-    private String userId;
+    private Long userId;
 
     @Column(name = "timestamp", nullable = false)
-    private String timestamp;
+    private LocalDateTime timestamp;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
-    @Column(name = "is_active", nullable = false)
-    private Boolean isActive;
+    @Column(name = "details")
+    private String details;
 }

@@ -1,7 +1,5 @@
 package com.vish.enterprise_rag.entities;
 
-import java.time.LocalDateTime;
-
 import com.vish.enterprise_rag.enums.UserDesignation;
 
 import jakarta.persistence.Column;
@@ -19,13 +17,15 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
+import lombok.EqualsAndHashCode;
 import lombok.ToString;
 
 @Entity
 @Table(name = "users")
 @Data
-@ToString
-public class User {
+@ToString(callSuper = true)
+@EqualsAndHashCode(callSuper = true)
+public class User extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false, updatable = false)
@@ -53,13 +53,4 @@ public class User {
     @ToString.Exclude
     @JoinColumn(name = "organization_id", nullable = false)
     private Organization organization;
-
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
-
-    @Column(name = "updated_at", nullable = false)
-    private LocalDateTime updatedAt;
-
-    @Column(name = "is_active", nullable = false)
-    private Boolean isActive;
 }
