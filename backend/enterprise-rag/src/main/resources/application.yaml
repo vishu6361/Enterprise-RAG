@@ -2,10 +2,6 @@
 server:
   servlet:
     context-path: /enterprise-rag
-    encoding:
-      charset: UTF-8
-      enabled: true
-      force: true
   port: 8800
 
 spring:
@@ -17,8 +13,11 @@ spring:
   jpa:
     properties:
       hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
         query:
           plan_cache_max_size: 64
           plan_parameter_metadata_max_size: 32
           in_clause_parameter_padding: true
+  session:
+    store-type: none
 

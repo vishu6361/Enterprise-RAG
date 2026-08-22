@@ -1,0 +1,56 @@
+package com.vish.enterprise_rag.controllers;
+
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.vish.enterprise_rag.requests.OrganizationReq;
+import com.vish.enterprise_rag.service.OrganizationService;
+
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/v1/organizations")
+@RequiredArgsConstructor
+public class OrganizationController {
+    private final OrganizationService organizationService;
+
+    @PostMapping
+    public ResponseEntity<?> createOrganization(@RequestBody OrganizationReq request) {
+        log.info("Creating organization: {}", request);
+        return organizationService.createOrganization(request);
+    }
+
+    @PutMapping("/{id}")
+    public ResponseEntity<?> updateOrganization(@PathVariable long id, @RequestBody OrganizationReq request) {
+        log.info("Updating organization: {} with ID: {}", request, id);
+        return organizationService.updateOrganization(id, request);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<?> deleteOrganization(@PathVariable long id) {
+        log.info("Deleting organization with ID: {}", id);
+        return organizationService.deleteOrganization(id);
+    }
+
+    @GetMapping
+    public ResponseEntity<?> getAllOrganizations() {
+        log.info("Getting all organizations");
+        return organizationService.getAllOrganizations();
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<?> getOrganization(@PathVariable long id) {
+        log.info("Getting organization with ID: {}", id);
+        return organizationService.getOrganization(id);
+    }
+
+}

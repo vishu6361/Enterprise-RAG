@@ -2,6 +2,8 @@ package com.vish.enterprise_rag.entities;
 
 import java.time.LocalDateTime;
 
+import org.springframework.data.annotation.LastModifiedBy;
+
 import com.vish.enterprise_rag.enums.UserActionType;
 
 import jakarta.persistence.Column;
@@ -40,6 +42,7 @@ public class AuditLog extends BaseEntity {
     @Column(name = "table_id", nullable = false)
     private Long tableId;
 
+    @LastModifiedBy
     @Column(name = "user_id", nullable = false)
     private Long userId;
 
