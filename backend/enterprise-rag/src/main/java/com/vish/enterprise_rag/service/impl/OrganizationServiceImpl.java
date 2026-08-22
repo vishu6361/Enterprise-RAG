@@ -13,6 +13,7 @@ import com.vish.enterprise_rag.requests.OrganizationReq;
 import com.vish.enterprise_rag.response.ResponseDTO;
 import com.vish.enterprise_rag.service.OrganizationService;
 
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -26,6 +27,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     private final OrganizationReadRepository organizationReadRepository;
 
     @Override
+    @Transactional
     public ResponseEntity<?> createOrganization(OrganizationReq request) {
         log.info("Creating organization: {}", request);
         try {
@@ -42,14 +44,15 @@ public class OrganizationServiceImpl implements OrganizationService {
             }
         } catch (Exception e) {
             log.error("Error occurred while creating organization", e);
-            return ResponseEntity.ok(ResponseDTO.error("Error occurred while processing organization creation"));
+            return ResponseEntity.ok(ResponseDTO.error(e.getMessage()));
         }
         Organization organization = organizationMapper.toEntity(request);
-        organizationWriteRepository.save(organization);
-        return ResponseEntity.ok(ResponseDTO.success("Organization created successfully", organization));
+        organization = organizationWriteRepository.save(organization);
+        return ResponseEntity.ok(ResponseDTO.success("Organization created successfully", organizationMapper.toRes(organization)));
     }
 
     @Override
+    @Transactional
     public ResponseEntity<?> updateOrganization(long id, OrganizationReq request) {
         log.info("Updating organization: {}", request);
         try {
@@ -72,7 +75,7 @@ public class OrganizationServiceImpl implements OrganizationService {
                     org.setContactPhone(request.getContactPhone());
                 }
                 organizationWriteRepository.save(org);
-                return ResponseEntity.ok(ResponseDTO.success("Organization updated successfully", org));
+                return ResponseEntity.ok(ResponseDTO.success("Organization updated successfully", organizationMapper.toRes(org)));
             }
             return ResponseEntity.ok(ResponseDTO.error("Organization not found with ID: " + id));
         } catch (Exception e) {
@@ -82,6 +85,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     }
 
     @Override
+    @Transactional
     public ResponseEntity<?> deleteOrganization(long id) {
         try {
             Optional<Organization> existingOrg = organizationReadRepository.findByIdAndIsActiveTrue(id);
@@ -101,7 +105,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     @Override
     public ResponseEntity<?> getAllOrganizations() {
         try {
-            return ResponseEntity.ok(ResponseDTO.success("Organizations fetched successfully", organizationReadRepository.findByIsActiveTrue()));
+            return ResponseEntity.ok(ResponseDTO.success("Organizations fetched successfully", organizationReadRepository.findByIsActiveTrue().stream().map(organizationMapper::toRes).toList()));
         } catch (Exception e) {
             log.error("Exceptoin occurred in getting all organizations", e);
             return ResponseEntity.ok(ResponseDTO.error("Error occurred while processing organization retrieval"));
@@ -116,7 +120,7 @@ public class OrganizationServiceImpl implements OrganizationService {
                 return ResponseEntity.ok(ResponseDTO.error("Organization not found with ID: " + id));
             }
             if (existingOrg.isPresent()) {
-                return ResponseEntity.ok(ResponseDTO.success("Organization found successfully", existingOrg.get()));
+                return ResponseEntity.ok(ResponseDTO.success("Organization found successfully", organizationMapper.toRes(existingOrg.get())));
             }
             return ResponseEntity.ok(ResponseDTO.error("Organization not found with ID: " + id));
         } catch (Exception e) {
