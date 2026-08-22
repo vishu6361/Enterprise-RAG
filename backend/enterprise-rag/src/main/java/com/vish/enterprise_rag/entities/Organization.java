@@ -27,9 +27,9 @@ public class Organization extends BaseEntity {
     @Column(name = "address")
     private String address;
 
-    @Column(name = "contact_email")
+    @Column(name = "contact_email", unique = true)
     private String contactEmail;
 
-    @Column(name = "contact_phone")
+    @Column(name = "contact_phone", unique = true)
     private String contactPhone;
 }

@@ -1,10 +1,13 @@
 package com.vish.enterprise_rag.service.impl;
 
+import java.util.Optional;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.vish.enterprise_rag.entities.Organization;
 import com.vish.enterprise_rag.mappers.OrganizationMapper;
+import com.vish.enterprise_rag.repositories.read.OrganizationReadRepository;
 import com.vish.enterprise_rag.repositories.write.OrganizationWriteRepository;
 import com.vish.enterprise_rag.requests.OrganizationReq;
 import com.vish.enterprise_rag.response.ResponseDTO;
@@ -20,10 +23,27 @@ public class OrganizationServiceImpl implements OrganizationService {
 
     private final OrganizationWriteRepository organizationWriteRepository;
     private final OrganizationMapper organizationMapper;
+    private final OrganizationReadRepository organizationReadRepository;
 
     @Override
     public ResponseEntity<?> createOrganization(OrganizationReq request) {
         log.info("Creating organization: {}", request);
+        try {
+            boolean hasEmail = request.getContactEmail() != null && !request.getContactEmail().trim().isEmpty();
+            boolean hasPhone = request.getContactPhone() != null && !request.getContactPhone().trim().isEmpty();
+
+            if (!hasEmail && !hasPhone) {
+                return ResponseEntity.ok(ResponseDTO.error("Either contactEmail or contactPhone must be provided"));
+            }
+
+            if ((hasEmail && organizationReadRepository.findByContactEmailAndIsActiveTrue(request.getContactEmail()).isPresent()) ||
+                    (hasPhone && organizationReadRepository.findByContactPhoneAndIsActiveTrue(request.getContactPhone()).isPresent())) {
+                return ResponseEntity.ok(ResponseDTO.error("Organization already exists with given contact info"));
+            }
+        } catch (Exception e) {
+            log.error("Error occurred while creating organization", e);
+            return ResponseEntity.ok(ResponseDTO.error("Error occurred while processing organization creation"));
+        }
         Organization organization = organizationMapper.toEntity(request);
         organizationWriteRepository.save(organization);
         return ResponseEntity.ok(ResponseDTO.success("Organization created successfully", organization));
@@ -31,26 +51,78 @@ public class OrganizationServiceImpl implements OrganizationService {
 
     @Override
     public ResponseEntity<?> updateOrganization(long id, OrganizationReq request) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'updateOrganization'");
+        log.info("Updating organization: {}", request);
+        try {
+            Optional<Organization> existingOrg = organizationReadRepository.findByIdAndIsActiveTrue(id);
+            if (existingOrg.isEmpty()) {
+                return ResponseEntity.ok(ResponseDTO.error("Organization not found with ID: " + id));
+            }
+            if (existingOrg.isPresent()) {
+                Organization org = existingOrg.get();
+                if (request.getName() != null && !request.getName().trim().isEmpty()) {
+                    org.setName(request.getName());
+                }
+                if (request.getAddress() != null && !request.getAddress().trim().isEmpty()) {
+                    org.setAddress(request.getAddress());
+                }
+                if (request.getContactEmail() != null && !request.getContactEmail().trim().isEmpty()) {
+                    org.setContactEmail(request.getContactEmail());
+                }
+                if (request.getContactPhone() != null && !request.getContactPhone().trim().isEmpty()) {
+                    org.setContactPhone(request.getContactPhone());
+                }
+                organizationWriteRepository.save(org);
+                return ResponseEntity.ok(ResponseDTO.success("Organization updated successfully", org));
+            }
+            return ResponseEntity.ok(ResponseDTO.error("Organization not found with ID: " + id));
+        } catch (Exception e) {
+            log.error("Exceptoin occurred in updating organization with ID {}", id, e);
+            return ResponseEntity.ok(ResponseDTO.error("Error occurred while processing organization update"));
+        }
     }
 
     @Override
     public ResponseEntity<?> deleteOrganization(long id) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'deleteOrganization'");
+        try {
+            Optional<Organization> existingOrg = organizationReadRepository.findByIdAndIsActiveTrue(id);
+            if (existingOrg.isEmpty()) {
+                return ResponseEntity.ok(ResponseDTO.error("Organization not found with ID: " + id));
+            }
+            Organization org = existingOrg.get();
+            org.setIsActive(false);
+            organizationWriteRepository.save(org);
+            return ResponseEntity.ok(ResponseDTO.success("Organization deleted successfully", null));
+        } catch (Exception e) {
+            log.error("Exceptoin occurred in deleting organization with ID {}", id, e);
+            return ResponseEntity.ok(ResponseDTO.error("Error occurred while processing organization deletion"));
+        }
     }
 
     @Override
     public ResponseEntity<?> getAllOrganizations() {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getAllOrganizations'");
+        try {
+            return ResponseEntity.ok(ResponseDTO.success("Organizations fetched successfully", organizationReadRepository.findByIsActiveTrue()));
+        } catch (Exception e) {
+            log.error("Exceptoin occurred in getting all organizations", e);
+            return ResponseEntity.ok(ResponseDTO.error("Error occurred while processing organization retrieval"));
+        }
     }
 
     @Override
     public ResponseEntity<?> getOrganization(long id) {
-        // TODO Auto-generated method stub
-        throw new UnsupportedOperationException("Unimplemented method 'getOrganization'");
+        try {
+            Optional<Organization> existingOrg = organizationReadRepository.findByIdAndIsActiveTrue(id);
+            if (existingOrg.isEmpty()) {
+                return ResponseEntity.ok(ResponseDTO.error("Organization not found with ID: " + id));
+            }
+            if (existingOrg.isPresent()) {
+                return ResponseEntity.ok(ResponseDTO.success("Organization found successfully", existingOrg.get()));
+            }
+            return ResponseEntity.ok(ResponseDTO.error("Organization not found with ID: " + id));
+        } catch (Exception e) {
+            log.error("Exceptoin occurred in getting organization with ID {}", id, e);
+            return ResponseEntity.ok(ResponseDTO.error("Error occurred while processing organization retrieval"));
+        }
     }
 
 }
