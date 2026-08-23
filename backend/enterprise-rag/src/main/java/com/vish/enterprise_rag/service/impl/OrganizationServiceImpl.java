@@ -6,11 +6,13 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.vish.enterprise_rag.entities.Organization;
+import com.vish.enterprise_rag.enums.UserActionType;
 import com.vish.enterprise_rag.mappers.OrganizationMapper;
 import com.vish.enterprise_rag.repositories.read.OrganizationReadRepository;
 import com.vish.enterprise_rag.repositories.write.OrganizationWriteRepository;
 import com.vish.enterprise_rag.requests.OrganizationReq;
 import com.vish.enterprise_rag.response.ResponseDTO;
+import com.vish.enterprise_rag.service.AuditService;
 import com.vish.enterprise_rag.service.OrganizationService;
 
 import jakarta.transaction.Transactional;
@@ -25,6 +27,7 @@ public class OrganizationServiceImpl implements OrganizationService {
     private final OrganizationWriteRepository organizationWriteRepository;
     private final OrganizationMapper organizationMapper;
     private final OrganizationReadRepository organizationReadRepository;
+    private final AuditService auditService;
 
     @Override
     @Transactional
@@ -48,6 +51,7 @@ public class OrganizationServiceImpl implements OrganizationService {
         }
         Organization organization = organizationMapper.toEntity(request);
         organization = organizationWriteRepository.save(organization);
+        auditService.audit(UserActionType.ORGANIZATION_CREATE, organization, "Created new organization");
         return ResponseEntity.ok(ResponseDTO.success("Organization created successfully", organizationMapper.toRes(organization)));
     }
 
@@ -75,6 +79,7 @@ public class OrganizationServiceImpl implements OrganizationService {
                     org.setContactPhone(request.getContactPhone());
                 }
                 organizationWriteRepository.save(org);
+                auditService.audit(UserActionType.ORGANIZATION_EDIT, org, "Updated organization");
                 return ResponseEntity.ok(ResponseDTO.success("Organization updated successfully", organizationMapper.toRes(org)));
             }
             return ResponseEntity.ok(ResponseDTO.error("Organization not found with ID: " + id));
@@ -95,6 +100,7 @@ public class OrganizationServiceImpl implements OrganizationService {
             Organization org = existingOrg.get();
             org.setIsActive(false);
             organizationWriteRepository.save(org);
+            auditService.audit(UserActionType.ORGANIZATION_DELETE, org, "Deleted organization");
             return ResponseEntity.ok(ResponseDTO.success("Organization deleted successfully", null));
         } catch (Exception e) {
             log.error("Exceptoin occurred in deleting organization with ID {}", id, e);

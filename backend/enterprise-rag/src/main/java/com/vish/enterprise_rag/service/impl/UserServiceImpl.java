@@ -6,12 +6,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.vish.enterprise_rag.entities.User;
+import com.vish.enterprise_rag.enums.UserActionType;
 import com.vish.enterprise_rag.mappers.UserMapper;
 import com.vish.enterprise_rag.repositories.read.OrganizationReadRepository;
 import com.vish.enterprise_rag.repositories.read.UserReadRepository;
 import com.vish.enterprise_rag.repositories.write.UserWriteRepository;
 import com.vish.enterprise_rag.requests.UserReq;
 import com.vish.enterprise_rag.response.ResponseDTO;
+import com.vish.enterprise_rag.service.AuditService;
 import com.vish.enterprise_rag.service.UserService;
 
 import jakarta.transaction.Transactional;
@@ -27,6 +29,7 @@ public class UserServiceImpl implements UserService {
     private final UserWriteRepository userWriteRepository;
     private final UserMapper userMapper;
     private final OrganizationReadRepository organizationReadRepository;
+    private final AuditService auditService;
 
     @Override
     @Transactional
@@ -44,6 +47,7 @@ public class UserServiceImpl implements UserService {
             }
             User user = userMapper.toEntity(request);
             user = userWriteRepository.save(user);
+            auditService.audit(UserActionType.CREATE_USER, user, "Created new user");
             return ResponseEntity.ok(ResponseDTO.success("User created successfully", userMapper.toRes(user)));
         } catch (Exception e) {
             log.error("Exception occurred while creating user", e);
@@ -81,6 +85,7 @@ public class UserServiceImpl implements UserService {
                 user.setOrganization(org.get());
             }
             userWriteRepository.save(user);
+            auditService.audit(UserActionType.EDIT_USER, user, "Updated user");
             return ResponseEntity.ok(ResponseDTO.success("User updated successfully", userMapper.toRes(user)));
         } catch (Exception e) {
             log.error("Exception occurred while updating user with ID {}", id, e);
@@ -100,6 +105,7 @@ public class UserServiceImpl implements UserService {
             User user = existingUser.get();
             user.setIsActive(false);
             userWriteRepository.save(user);
+            auditService.audit(UserActionType.DELETE_USER, user, "Deleted user");
             return ResponseEntity.ok(ResponseDTO.success("User deleted successfully", null));
         } catch (Exception e) {
             log.error("Exception occurred while deleting user with ID {}", id, e);
