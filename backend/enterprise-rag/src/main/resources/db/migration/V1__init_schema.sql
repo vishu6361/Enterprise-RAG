@@ -26,7 +26,7 @@ CREATE TABLE users (
     updated_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     CONSTRAINT fk_users_organization FOREIGN KEY (organization_id) REFERENCES organizations(id),
-    CONSTRAINT uk_users_organization_email UNIQUE (organization_id, email)
+    CONSTRAINT uk_users_organization_email UNIQUE (organization_id, email, is_active)
 );
 
 CREATE INDEX idx_users_org_id ON users(organization_id);
@@ -47,7 +47,7 @@ CREATE TABLE documents (
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     CONSTRAINT fk_documents_organization FOREIGN KEY (organization_id) REFERENCES organizations(id),
     CONSTRAINT fk_documents_owner FOREIGN KEY (owner_id) REFERENCES users(id),
-    CONSTRAINT uk_documents_organization_content_hash UNIQUE (organization_id, content_hash)
+    CONSTRAINT uk_documents_organization_content_hash UNIQUE (organization_id, content_hash, is_active)
 );
 
 CREATE INDEX idx_documents_org_id ON documents(organization_id);
@@ -65,7 +65,7 @@ CREATE TABLE document_permissions (
     is_active BOOLEAN NOT NULL DEFAULT TRUE,
     CONSTRAINT fk_doc_perm_document FOREIGN KEY (document_id) REFERENCES documents(id) ON DELETE CASCADE,
     CONSTRAINT fk_doc_perm_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT uk_document_permissions_document_user UNIQUE (document_id, user_id)
+    CONSTRAINT uk_document_permissions_document_user UNIQUE (document_id, user_id, is_active)
 );
 
 CREATE INDEX idx_doc_perm_user_id ON document_permissions(user_id);

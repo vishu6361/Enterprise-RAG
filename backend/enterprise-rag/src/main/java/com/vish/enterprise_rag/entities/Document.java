@@ -26,7 +26,7 @@ import lombok.ToString;
     name = "documents",
     uniqueConstraints = @UniqueConstraint(
         name = "uk_documents_organization_content_hash",
-        columnNames = {"organization_id", "content_hash"}
+        columnNames = {"organization_id", "content_hash", "is_active"}
     )
 )
 @Data
