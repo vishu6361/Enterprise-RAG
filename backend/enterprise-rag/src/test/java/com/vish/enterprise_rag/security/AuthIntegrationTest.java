@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vish.enterprise_rag.entities.Organization;
 import com.vish.enterprise_rag.entities.User;
 import com.vish.enterprise_rag.enums.UserDesignation;
+import com.vish.enterprise_rag.repositories.read.DocumentReadRepository;
 import com.vish.enterprise_rag.repositories.read.OrganizationReadRepository;
 import com.vish.enterprise_rag.repositories.read.UserReadRepository;
 import com.vish.enterprise_rag.repositories.write.OrganizationWriteRepository;
@@ -14,6 +15,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
@@ -23,7 +25,9 @@ import org.springframework.web.context.WebApplicationContext;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -51,6 +55,9 @@ public class AuthIntegrationTest {
     private UserReadRepository userReadRepository;
 
     @Autowired
+    private DocumentReadRepository documentReadRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private Organization testOrg;
@@ -70,6 +77,30 @@ public class AuthIntegrationTest {
                     org.setContactPhone("1234567890");
                     return organizationWriteRepository.save(org);
                 });
+    }
+
+    private String createTestUserAndGetToken(String emailPrefix, UserDesignation designation) throws Exception {
+        String uniqueEmail = emailPrefix + "-" + System.currentTimeMillis() + "@enterprise.com";
+        String rawPassword = "SecurePassword123!";
+
+        User user = new User();
+        user.setName("Test " + designation.name());
+        user.setEmail(uniqueEmail);
+        user.setPassword(passwordEncoder.encode(rawPassword));
+        user.setDesignation(designation);
+        user.setOrganization(testOrg);
+        userWriteRepository.save(user);
+
+        LoginReq validLogin = new LoginReq(uniqueEmail, rawPassword);
+        MvcResult loginResult = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(validLogin)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.flag").value(true))
+                .andReturn();
+
+        String responseBody = loginResult.getResponse().getContentAsString();
+        return objectMapper.readTree(responseBody).get("data").get("token").asText();
     }
 
     @Test
@@ -119,6 +150,57 @@ public class AuthIntegrationTest {
 
         // 5. Access protected endpoint with valid Bearer token -> OK (200)
         mockMvc.perform(get("/api/v1/users")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.flag").value(true));
+    }
+
+    @Test
+    void testDocumentUploadAndTenantScoping() throws Exception {
+        String token = createTestUserAndGetToken("doc-uploader", UserDesignation.ADMIN);
+
+        MockMultipartFile file = new MockMultipartFile(
+                "file",
+                "test-document-" + System.currentTimeMillis() + ".txt",
+                "text/plain",
+                ("Sample content for enterprise RAG document ingestion - " + System.currentTimeMillis()).getBytes()
+        );
+
+        // 1. Upload document with valid Bearer token
+        MvcResult uploadResult = mockMvc.perform(multipart("/api/v1/documents/upload")
+                        .file(file)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.flag").value(true))
+                .andExpect(jsonPath("$.data.documentName").value(file.getOriginalFilename()))
+                .andReturn();
+
+        String uploadJson = uploadResult.getResponse().getContentAsString();
+        long docId = objectMapper.readTree(uploadJson).get("data").get("id").asLong();
+
+        // 2. Duplicate upload test (SHA-256 duplicate detection)
+        mockMvc.perform(multipart("/api/v1/documents/upload")
+                        .file(file)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.flag").value(false));
+
+        // 3. Fetch documents for current tenant
+        mockMvc.perform(get("/api/v1/documents")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.flag").value(true))
+                .andExpect(jsonPath("$.data").isArray());
+
+        // 4. Fetch specific document
+        mockMvc.perform(get("/api/v1/documents/" + docId)
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.flag").value(true))
+                .andExpect(jsonPath("$.data.id").value(docId));
+
+        // 5. Delete document
+        mockMvc.perform(delete("/api/v1/documents/" + docId)
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.flag").value(true));

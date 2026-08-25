@@ -9,6 +9,10 @@ public interface DocumentService {
 
     ResponseEntity<?> uploadDocument(MultipartFile file);
 
+    ResponseEntity<?> getDocuments();
+
+    ResponseEntity<?> getDocument(Long id);
+
     ResponseEntity<?> deleteDocument(Long id);
 
     ResponseEntity<?> updatePermission(DocumentPermissionUpdateReq request);

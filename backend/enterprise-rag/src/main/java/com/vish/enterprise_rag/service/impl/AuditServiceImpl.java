@@ -11,6 +11,7 @@ import com.vish.enterprise_rag.entities.Organization;
 import com.vish.enterprise_rag.entities.User;
 import com.vish.enterprise_rag.enums.UserActionType;
 import com.vish.enterprise_rag.repositories.write.AuditLogWriteRepository;
+import com.vish.enterprise_rag.security.SecurityUtils;
 import com.vish.enterprise_rag.service.AuditService;
 import com.vish.enterprise_rag.utils.CommonUtils;
 
@@ -28,7 +29,8 @@ public class AuditServiceImpl implements AuditService {
     @Override
     @Transactional
     public <T> void audit(UserActionType actionType, T entity, String details) {
-        audit(actionType, entity, 0L, details);
+        Long currentUserId = SecurityUtils.getCurrentUserId();
+        audit(actionType, entity, currentUserId != null ? currentUserId : 0L, details);
     }
 
     @Override
@@ -43,18 +45,23 @@ public class AuditServiceImpl implements AuditService {
             String tableName = CommonUtils.getTableName(entity.getClass());
             Long tableId = extractEntityId(entity);
             Long organizationId = extractOrganizationId(entity);
+            if (organizationId == null || organizationId == 0L) {
+                organizationId = SecurityUtils.getCurrentOrganizationId();
+            }
+
+            Long actorUserId = (userId != null && userId != 0L) ? userId : SecurityUtils.getCurrentUserId();
 
             AuditLog auditLog = new AuditLog();
             auditLog.setAction(actionType);
             auditLog.setTableName(tableName);
             auditLog.setTableId(tableId != null ? tableId : 0L);
             auditLog.setOrganizationId(organizationId != null ? organizationId : 0L);
-            auditLog.setUserId(userId != null ? userId : 0L);
+            auditLog.setUserId(actorUserId != null ? actorUserId : 0L);
             auditLog.setTimestamp(LocalDateTime.now());
             auditLog.setDetails(details);
 
             auditLogWriteRepository.save(auditLog);
-            log.info("Audit log recorded for action: {} on table: {} (id: {})", actionType, tableName, tableId);
+            log.info("Audit log recorded for action: {} on table: {} (id: {}) by user: {}", actionType, tableName, tableId, actorUserId);
         } catch (Exception e) {
             log.error("Failed to create audit log for action: {}", actionType, e);
         }
