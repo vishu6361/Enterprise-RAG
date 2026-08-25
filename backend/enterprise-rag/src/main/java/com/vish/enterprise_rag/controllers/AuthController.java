@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.vish.enterprise_rag.requests.LoginReq;
+import com.vish.enterprise_rag.requests.SignupReq;
 import com.vish.enterprise_rag.response.ResponseDTO;
 import com.vish.enterprise_rag.service.AuthService;
 
@@ -39,5 +40,21 @@ public class AuthController {
             );
         }
         return authService.login(request);
+    }
+
+    @PostMapping("/signup")
+    public ResponseEntity<?> signup(@Valid @RequestBody SignupReq request, BindingResult result) {
+        if (result.hasErrors()) {
+            return ResponseEntity.ok(
+                    ResponseDTO.error(
+                            result.getAllErrors()
+                                    .stream()
+                                    .map(e -> e.getDefaultMessage())
+                                    .collect(Collectors.toList())
+                                    .toString()
+                    )
+            );
+        }
+        return authService.signup(request);
     }
 }

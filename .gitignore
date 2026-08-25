@@ -1,3 +1,10 @@
 .env
 .idea/
 .vscode/
+node_modules/
+frontend/node_modules/
+backend/target/
+backend/.mvn/
+frontend/.vite
+frontend/dist/
+.mvn/

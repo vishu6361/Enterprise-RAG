@@ -1,15 +1,22 @@
 package com.vish.enterprise_rag.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vish.enterprise_rag.entities.Document;
+import com.vish.enterprise_rag.entities.DocumentPermission;
 import com.vish.enterprise_rag.entities.Organization;
 import com.vish.enterprise_rag.entities.User;
 import com.vish.enterprise_rag.enums.UserDesignation;
+import com.vish.enterprise_rag.repositories.read.DocumentPermissionReadRepository;
 import com.vish.enterprise_rag.repositories.read.DocumentReadRepository;
 import com.vish.enterprise_rag.repositories.read.OrganizationReadRepository;
 import com.vish.enterprise_rag.repositories.read.UserReadRepository;
+import com.vish.enterprise_rag.repositories.write.DocumentPermissionWriteRepository;
+import com.vish.enterprise_rag.repositories.write.DocumentWriteRepository;
 import com.vish.enterprise_rag.repositories.write.OrganizationWriteRepository;
 import com.vish.enterprise_rag.repositories.write.UserWriteRepository;
 import com.vish.enterprise_rag.requests.LoginReq;
+import com.vish.enterprise_rag.requests.SignupReq;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,6 +29,8 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import org.springframework.web.context.WebApplicationContext;
 
+import java.util.List;
+
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.security.test.web.servlet.setup.SecurityMockMvcConfigurers.springSecurity;
@@ -32,8 +41,14 @@ import static org.springframework.test.web.servlet.request.MockMvcRequestBuilder
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import com.vish.enterprise_rag.service.AuditService;
+
 @SpringBootTest
 public class AuthIntegrationTest {
+
+    @MockitoBean
+    private AuditService auditService;
 
     @Autowired
     private WebApplicationContext context;
@@ -58,9 +73,19 @@ public class AuthIntegrationTest {
     private DocumentReadRepository documentReadRepository;
 
     @Autowired
+    private DocumentWriteRepository documentWriteRepository;
+
+    @Autowired
+    private DocumentPermissionReadRepository documentPermissionReadRepository;
+
+    @Autowired
+    private DocumentPermissionWriteRepository documentPermissionWriteRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
     private Organization testOrg;
+    private String signupCreatedEmail;
 
     @BeforeEach
     void setUp() {
@@ -77,6 +102,28 @@ public class AuthIntegrationTest {
                     org.setContactPhone("1234567890");
                     return organizationWriteRepository.save(org);
                 });
+    }
+
+    @AfterEach
+    void tearDown() {
+        try {
+            documentPermissionWriteRepository.deleteAll();
+            documentWriteRepository.deleteAll();
+
+            if (testOrg != null && testOrg.getId() != null) {
+                List<User> users = userReadRepository.findByOrganizationIdAndIsActiveTrue(testOrg.getId());
+                userWriteRepository.deleteAll(users);
+            }
+
+            if (signupCreatedEmail != null) {
+                userReadRepository.findByEmailAndIsActiveTrue(signupCreatedEmail).ifPresent(u -> {
+                    Long orgId = u.getOrganization().getId();
+                    userWriteRepository.delete(u);
+                    organizationReadRepository.findByIdAndIsActiveTrue(orgId).ifPresent(organizationWriteRepository::delete);
+                });
+            }
+        } catch (Exception ignored) {
+        }
     }
 
     private String createTestUserAndGetToken(String emailPrefix, UserDesignation designation) throws Exception {
@@ -101,6 +148,23 @@ public class AuthIntegrationTest {
 
         String responseBody = loginResult.getResponse().getContentAsString();
         return objectMapper.readTree(responseBody).get("data").get("token").asText();
+    }
+
+    @Test
+    void testSignupFlow() throws Exception {
+        String uniqueOrg = "Acme-" + System.currentTimeMillis();
+        signupCreatedEmail = "admin-" + System.currentTimeMillis() + "@acme.com";
+
+        SignupReq signupReq = new SignupReq(uniqueOrg, "Acme Admin", signupCreatedEmail, "SecurePassword123!", "9876543210");
+
+        mockMvc.perform(post("/api/v1/auth/signup")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(signupReq)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.flag").value(true))
+                .andExpect(jsonPath("$.data.token").isNotEmpty())
+                .andExpect(jsonPath("$.data.user.email").value(signupCreatedEmail))
+                .andExpect(jsonPath("$.data.user.designation").value("ADMIN"));
     }
 
     @Test
