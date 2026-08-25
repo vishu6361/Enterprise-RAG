@@ -61,13 +61,14 @@ public class User extends BaseEntity {
     @JoinColumn(name = "organization_id", nullable = false)
     private Organization organization;
 
+    public void setDesignation(UserDesignation designation) {
+        this.designation = designation;
+    }
+
     public void setDesignation(String designation) {
         if (designation == null || designation.isBlank()) {
             throw new IllegalArgumentException("Designation cannot be null or blank");
         }
-        if (UserDesignation.valueOf(designation.toUpperCase()) == null) {
-            throw new IllegalArgumentException("Invalid designation: " + designation);
-        }
-        this.designation = UserDesignation.valueOf(designation.toUpperCase());
+        this.designation = UserDesignation.valueOf(designation.trim().toUpperCase());
     }
 }

@@ -3,7 +3,9 @@ package com.vish.enterprise_rag.service.impl;
 import java.util.Optional;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.vish.enterprise_rag.entities.User;
 import com.vish.enterprise_rag.enums.UserActionType;
@@ -16,7 +18,6 @@ import com.vish.enterprise_rag.response.ResponseDTO;
 import com.vish.enterprise_rag.service.AuditService;
 import com.vish.enterprise_rag.service.UserService;
 
-import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,6 +31,7 @@ public class UserServiceImpl implements UserService {
     private final UserMapper userMapper;
     private final OrganizationReadRepository organizationReadRepository;
     private final AuditService auditService;
+    private final PasswordEncoder passwordEncoder;
 
     @Override
     @Transactional
@@ -46,6 +48,7 @@ public class UserServiceImpl implements UserService {
                 return ResponseEntity.ok(ResponseDTO.error("User with this email already exists"));
             }
             User user = userMapper.toEntity(request);
+            user.setPassword(passwordEncoder.encode(request.getPassword()));
             user = userWriteRepository.save(user);
             auditService.audit(UserActionType.CREATE_USER, user, "Created new user");
             return ResponseEntity.ok(ResponseDTO.success("User created successfully", userMapper.toRes(user)));
@@ -72,7 +75,7 @@ public class UserServiceImpl implements UserService {
                 user.setEmail(request.getEmail());
             }
             if (request.getPassword() != null && !request.getPassword().trim().isEmpty()) {
-                user.setPassword(request.getPassword());
+                user.setPassword(passwordEncoder.encode(request.getPassword()));
             }
             if (request.getDesignation() != null && !request.getDesignation().trim().isEmpty()) {
                 user.setDesignation(request.getDesignation());
