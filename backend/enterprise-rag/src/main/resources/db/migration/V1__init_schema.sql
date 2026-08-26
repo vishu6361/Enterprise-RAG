@@ -19,7 +19,7 @@ CREATE TABLE users (
     id BIGSERIAL PRIMARY KEY,
     organization_id BIGINT NOT NULL,
     name VARCHAR(100) NOT NULL,
-    email VARCHAR(255) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL,
     password VARCHAR(255) NOT NULL,
     designation VARCHAR(50) NOT NULL,
     created_at TIMESTAMP WITHOUT TIME ZONE NOT NULL,

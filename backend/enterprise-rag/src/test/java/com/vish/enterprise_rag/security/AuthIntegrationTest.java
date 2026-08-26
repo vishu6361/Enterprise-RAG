@@ -269,4 +269,91 @@ public class AuthIntegrationTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.flag").value(true));
     }
+
+    @Test
+    void testRoleBasedDocumentVisibility() throws Exception {
+        // 1. Create users
+        String adminToken = createTestUserAndGetToken("vis-admin", UserDesignation.ADMIN);
+        String managerToken = createTestUserAndGetToken("vis-manager", UserDesignation.MANAGER);
+        
+        String empAEmail = "emp-a-" + System.currentTimeMillis() + "@enterprise.com";
+        User empA = new User();
+        empA.setName("Employee A");
+        empA.setEmail(empAEmail);
+        empA.setPassword(passwordEncoder.encode("SecurePassword123!"));
+        empA.setDesignation(UserDesignation.EMPLOYEE);
+        empA.setOrganization(testOrg);
+        empA = userWriteRepository.save(empA);
+
+        LoginReq empALogin = new LoginReq(empAEmail, "SecurePassword123!");
+        MvcResult empALoginRes = mockMvc.perform(post("/api/v1/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(empALogin)))
+                .andExpect(status().isOk())
+                .andReturn();
+        String empAToken = objectMapper.readTree(empALoginRes.getResponse().getContentAsString()).get("data").get("token").asText();
+
+        String empBToken = createTestUserAndGetToken("emp-b", UserDesignation.EMPLOYEE);
+
+        // 2. Upload 4 documents by different users
+        // Doc 1: Admin
+        MockMultipartFile docAdmin = new MockMultipartFile("file", "doc-admin.txt", "text/plain", "Admin Content".getBytes());
+        MvcResult res1 = mockMvc.perform(multipart("/api/v1/documents/upload").file(docAdmin).header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk()).andReturn();
+        long docAdminId = objectMapper.readTree(res1.getResponse().getContentAsString()).get("data").get("id").asLong();
+
+        // Doc 2: Manager
+        MockMultipartFile docMgr = new MockMultipartFile("file", "doc-mgr.txt", "text/plain", "Manager Content".getBytes());
+        mockMvc.perform(multipart("/api/v1/documents/upload").file(docMgr).header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk());
+
+        // Doc 3: Employee A
+        MockMultipartFile docEmpA = new MockMultipartFile("file", "doc-emp-a.txt", "text/plain", "Emp A Content".getBytes());
+        mockMvc.perform(multipart("/api/v1/documents/upload").file(docEmpA).header("Authorization", "Bearer " + empAToken))
+                .andExpect(status().isOk());
+
+        // Doc 4: Employee B
+        MockMultipartFile docEmpB = new MockMultipartFile("file", "doc-emp-b.txt", "text/plain", "Emp B Content".getBytes());
+        MvcResult res4 = mockMvc.perform(multipart("/api/v1/documents/upload").file(docEmpB).header("Authorization", "Bearer " + empBToken))
+                .andExpect(status().isOk()).andReturn();
+        long docEmpBId = objectMapper.readTree(res4.getResponse().getContentAsString()).get("data").get("id").asLong();
+
+        // 3. Admin can see ALL 4 documents in the organization
+        mockMvc.perform(get("/api/v1/documents").header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(4));
+
+        // 4. Manager can see his own + employees' documents (3 docs: docMgr, docEmpA, docEmpB), but not docAdmin
+        mockMvc.perform(get("/api/v1/documents").header("Authorization", "Bearer " + managerToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(3));
+
+        // 5. Employee A can only see his own document (1 doc: docEmpA)
+        mockMvc.perform(get("/api/v1/documents").header("Authorization", "Bearer " + empAToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(1));
+
+        // Employee A cannot view Employee B's document
+        mockMvc.perform(get("/api/v1/documents/" + docEmpBId).header("Authorization", "Bearer " + empAToken))
+                .andExpect(status().isForbidden());
+
+        // 6. Share docAdmin with Employee A
+        String shareJson = String.format("{\"documentId\": %d, \"userId\": %d, \"permissionType\": \"VIEWER\"}", docAdminId, empA.getId());
+        mockMvc.perform(post("/api/v1/documents/permission")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(shareJson)
+                        .header("Authorization", "Bearer " + adminToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.flag").value(true));
+
+        // 7. Now Employee A can see 2 documents (own docEmpA + shared docAdmin)
+        mockMvc.perform(get("/api/v1/documents").header("Authorization", "Bearer " + empAToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.length()").value(2));
+
+        // And Employee A can now fetch docAdmin directly
+        mockMvc.perform(get("/api/v1/documents/" + docAdminId).header("Authorization", "Bearer " + empAToken))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.data.id").value(docAdminId));
+    }
 }

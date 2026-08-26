@@ -5,21 +5,19 @@ import { DocumentItem, User, DocumentPermissionType } from "@/types";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
-import { Modal } from "@/components/ui/Modal";
-import { Alert } from "@/components/ui/Alert";
 import { formatDate } from "@/lib/utils";
 import {
-  UploadCloud,
   FileText,
   Trash2,
   Share2,
-  RefreshCw,
   Search,
   FileCode,
   FileSpreadsheet,
   File,
-  Shield,
 } from "lucide-react";
+import DocumentHeader from "@/components/document/DocumentHeader";
+import UploadZone from "@/components/document/UploadZone";
+import PermissionChangeModal from "@/components/document/PermissionChangeModal";
 
 export const Documents: React.FC = () => {
   const [documents, setDocuments] = useState<DocumentItem[]>([]);
@@ -36,7 +34,7 @@ export const Documents: React.FC = () => {
   // Permission Modal States
   const [selectedDoc, setSelectedDoc] = useState<DocumentItem | null>(null);
   const [isPermissionModalOpen, setIsPermissionModalOpen] = useState(false);
-  const [targetUserId, setTargetUserId] = useState<number | "">("");
+  const [targetUserId, setTargetUserId] = useState<number | string>("");
   const [permissionType, setPermissionType] = useState<DocumentPermissionType>("VIEWER");
   const [isUpdatingPermission, setIsUpdatingPermission] = useState(false);
   const [permissionFeedback, setPermissionFeedback] = useState<string | null>(null);
@@ -175,73 +173,18 @@ export const Documents: React.FC = () => {
   return (
     <div className="space-y-8">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div>
-          <h1 className="text-2xl sm:text-3xl font-extrabold tracking-tight">Document Hub</h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            Manage, upload, and govern enterprise knowledge assets with SHA-256 deduplication
-          </p>
-        </div>
-        <Button onClick={fetchDocuments} variant="outline" size="sm" className="gap-2 self-start">
-          <RefreshCw className="h-4 w-4" />
-          Refresh
-        </Button>
-      </div>
+      <DocumentHeader fetchDocuments={fetchDocuments} />
 
       {/* Drag & Drop Upload Zone */}
-      <Card className="border-2 border-dashed transition-all duration-200">
-        <CardContent className="p-6">
-          <div
-            onDragEnter={handleDrag}
-            onDragLeave={handleDrag}
-            onDragOver={handleDrag}
-            onDrop={handleDrop}
-            className={`flex flex-col items-center justify-center rounded-xl p-8 text-center transition-colors ${
-              dragActive ? "bg-primary/10 border-primary" : "bg-muted/30"
-            }`}
-          >
-            <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-inner mb-4">
-              <UploadCloud className="h-8 w-8" />
-            </div>
-
-            <h3 className="text-base font-semibold">
-              {dragActive ? "Drop your file here" : "Drag and drop your document here"}
-            </h3>
-            <p className="text-xs text-muted-foreground mt-1 max-w-md">
-              Supports PDF, DOCX, TXT, CSV, MD, and JSON files. File is retained for retries and audited.
-            </p>
-
-            <input
-              ref={fileInputRef}
-              type="file"
-              onChange={(e) => {
-                if (e.target.files && e.target.files[0]) {
-                  handleFileUpload(e.target.files[0]);
-                }
-              }}
-              className="hidden"
-              accept=".pdf,.txt,.docx,.csv,.json,.md"
-            />
-
-            <div className="mt-5 flex gap-3">
-              <Button
-                onClick={() => fileInputRef.current?.click()}
-                isLoading={isUploading}
-                className="gap-2 font-medium"
-              >
-                <UploadCloud className="h-4 w-4" />
-                Browse Files
-              </Button>
-            </div>
-          </div>
-
-          {uploadFeedback && (
-            <div className="mt-4">
-              <Alert variant={uploadFeedback.type}>{uploadFeedback.message}</Alert>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+      <UploadZone 
+      dragActive={dragActive}
+      fileInputRef={fileInputRef}
+      uploadFeedback={uploadFeedback} 
+      handleDrag={handleDrag}
+      handleDrop={handleDrop}
+      isUploading={isUploading}
+      handleFileUpload={handleFileUpload}
+      />
 
       {/* Document Library Table */}
       <Card>
@@ -341,68 +284,19 @@ export const Documents: React.FC = () => {
       </Card>
 
       {/* Permission Management Modal */}
-      <Modal
-        isOpen={isPermissionModalOpen}
-        onClose={() => setIsPermissionModalOpen(false)}
-        title="Document Permissions"
-        description={`Manage access rights for "${selectedDoc?.documentName}"`}
-      >
-        <div className="space-y-4">
-          {permissionFeedback && (
-            <Alert variant={permissionFeedback.includes("success") ? "success" : "destructive"}>
-              {permissionFeedback}
-            </Alert>
-          )}
-
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Select Team Member
-            </label>
-            <select
-              value={targetUserId}
-              onChange={(e) => setTargetUserId(e.target.value ? Number(e.target.value) : "")}
-              className="w-full rounded-lg border border-input bg-background p-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="">-- Choose User --</option>
-              {teamMembers.map((member) => (
-                <option key={member.id} value={member.id}>
-                  {member.name} ({member.email}) — {member.designation}
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
-              Access Permission Level
-            </label>
-            <select
-              value={permissionType}
-              onChange={(e) => setPermissionType(e.target.value as DocumentPermissionType)}
-              className="w-full rounded-lg border border-input bg-background p-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
-            >
-              <option value="VIEWER">VIEWER (Read-only / RAG query)</option>
-              <option value="EDITOR">EDITOR (Modify / Re-process)</option>
-              <option value="OWNER">OWNER (Full control / Manage rights)</option>
-            </select>
-          </div>
-
-          <div className="flex justify-end gap-3 pt-4 border-t">
-            <Button variant="outline" onClick={() => setIsPermissionModalOpen(false)}>
-              Cancel
-            </Button>
-            <Button
-              onClick={handleSavePermission}
-              isLoading={isUpdatingPermission}
-              disabled={!targetUserId}
-              className="gap-2"
-            >
-              <Shield className="h-4 w-4" />
-              Save Permissions
-            </Button>
-          </div>
-        </div>
-      </Modal>
+      <PermissionChangeModal 
+        isPermissionModalOpen={isPermissionModalOpen}
+        setIsPermissionModalOpen={setIsPermissionModalOpen}
+        selectedDoc={selectedDoc}
+        permissionFeedback={permissionFeedback}
+        targetUserId={targetUserId}
+        setTargetUserId={setTargetUserId}
+        permissionType={permissionType}
+        setPermissionType={setPermissionType}
+        teamMembers={teamMembers}
+        handleSavePermission={handleSavePermission}
+        isUpdatingPermission={isUpdatingPermission}
+      />
     </div>
   );
 };

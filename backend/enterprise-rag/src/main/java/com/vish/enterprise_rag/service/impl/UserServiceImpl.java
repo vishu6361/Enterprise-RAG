@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.vish.enterprise_rag.entities.Document;
 import com.vish.enterprise_rag.entities.DocumentOwnershipHistory;
-import com.vish.enterprise_rag.entities.Organization;
 import com.vish.enterprise_rag.entities.User;
 import com.vish.enterprise_rag.enums.UserActionType;
 import com.vish.enterprise_rag.mappers.UserMapper;
