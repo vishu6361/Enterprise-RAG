@@ -8,3 +8,9 @@ backend/.mvn/
 frontend/.vite
 frontend/dist/
 .mvn/
+ai-service/.venv/
+ai-service/.pytest_cache/
+ai-service/app/__pycache__/
+*/__pycache__/
+__pycache__/
+*.py[cod]
