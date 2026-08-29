@@ -6,6 +6,8 @@ from app.config import settings
 from app.api.v1.ingest import router as ingest_router
 from app.api.v1.retrieve import router as retrieve_router
 from app.models.schemas import HealthResponse
+from app.kafka.producer import kafka_producer
+from app.kafka.consumer import kafka_consumer
 
 # Configure logging
 logging.basicConfig(
@@ -18,8 +20,17 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info(f"Starting {settings.APP_NAME} on port {settings.PORT}...")
+    # Start Kafka Producer and Consumer workers
+    if settings.KAFKA_ENABLED:
+        await kafka_producer.start()
+        await kafka_consumer.start()
+
     yield
+
     logger.info(f"Shutting down {settings.APP_NAME}...")
+    if settings.KAFKA_ENABLED:
+        await kafka_consumer.stop()
+        await kafka_producer.stop()
 
 
 app = FastAPI(

@@ -17,6 +17,13 @@ class Settings(BaseSettings):
     EMBEDDING_MODEL_NAME: str = "all-MiniLM-L6-v2"
     VECTOR_DIMENSION: int = 384
 
+    # Kafka Event Pipeline Configuration
+    KAFKA_BOOTSTRAP_SERVERS: str = "localhost:9092"
+    KAFKA_INGESTION_TOPIC: str = "document-ingestion-events"
+    KAFKA_STATUS_TOPIC: str = "document-status-events"
+    KAFKA_CONSUMER_GROUP: str = "enterprise-rag-ai-group"
+    KAFKA_ENABLED: bool = True
+
     # CORS
     CORS_ORIGINS: List[str] = [
         "http://localhost:5173",

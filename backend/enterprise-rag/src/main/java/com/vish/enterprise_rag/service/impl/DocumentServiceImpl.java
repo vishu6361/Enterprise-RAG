@@ -1,5 +1,6 @@
 package com.vish.enterprise_rag.service.impl;
 
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
@@ -38,6 +39,10 @@ import com.vish.enterprise_rag.utils.CommonUtils;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
+import com.vish.enterprise_rag.events.DocumentIngestEvent;
+import com.vish.enterprise_rag.kafka.DocumentEventProducer;
+import com.vish.enterprise_rag.service.FileStorageService;
+
 @Slf4j
 @Service
 @RequiredArgsConstructor
@@ -50,6 +55,8 @@ public class DocumentServiceImpl implements DocumentService {
     private final DocumentPermissionWriteRepository documentPermissionWriteRepository;
     private final DocumentPermissionReadRepository documentPermissionReadRepository;
     private final DocumentOwnershipHistoryWriteRepository documentOwnershipHistoryWriteRepository;
+    private final FileStorageService fileStorageService;
+    private final DocumentEventProducer documentEventProducer;
     private final AuditService auditService;
     private final DocumentMapper documentMapper;
 
@@ -82,6 +89,10 @@ public class DocumentServiceImpl implements DocumentService {
             Organization organization = organizationReadRepository.findByIdAndIsActiveTrue(orgId)
                     .orElseThrow(() -> new IllegalStateException("Authenticated organization not found"));
 
+            // 1. Store raw file on disk (Claim Check Pattern)
+            String storedFilePath = fileStorageService.storeFile(file, orgId, contentHash);
+
+            // 2. Persist Document entity with PROCESSING status
             Document document = new Document();
             document.setOrganization(organization);
             document.setContentHash(contentHash);
@@ -92,11 +103,25 @@ public class DocumentServiceImpl implements DocumentService {
             document.setStatus(DocumentStatus.PROCESSING);
             document = documentWriteRepository.save(document);
 
+            // 3. Assign initial OWNER document permission
             DocumentPermission documentPermission = new DocumentPermission();
             documentPermission.setDocument(document);
             documentPermission.setUser(user);
             documentPermission.setPermission(DocumentPermissionType.OWNER);
             documentPermissionWriteRepository.save(documentPermission);
+
+            // 4. Emit DocumentIngestEvent to Kafka
+            DocumentIngestEvent ingestEvent = DocumentIngestEvent.builder()
+                    .documentId(document.getId())
+                    .organizationId(orgId)
+                    .ownerId(userId)
+                    .filename(filename)
+                    .contentType(file.getContentType())
+                    .filePath(storedFilePath)
+                    .contentHash(contentHash)
+                    .timestamp(Instant.now())
+                    .build();
+            documentEventProducer.sendIngestionEvent(ingestEvent);
 
             auditService.audit(UserActionType.UPLOAD_DOCUMENT, document, "Uploaded document: " + filename);
             return ResponseEntity.ok(ResponseDTO.success("Document uploaded successfully", documentMapper.toRes(document)));

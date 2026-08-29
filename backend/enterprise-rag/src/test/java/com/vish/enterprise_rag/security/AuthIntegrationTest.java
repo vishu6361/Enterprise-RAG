@@ -43,12 +43,20 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import com.vish.enterprise_rag.service.AuditService;
+import com.vish.enterprise_rag.kafka.DocumentEventProducer;
+import com.vish.enterprise_rag.kafka.DocumentStatusConsumer;
 
 @SpringBootTest
 public class AuthIntegrationTest {
 
     @MockitoBean
     private AuditService auditService;
+
+    @MockitoBean
+    private DocumentEventProducer documentEventProducer;
+
+    @MockitoBean
+    private DocumentStatusConsumer documentStatusConsumer;
 
     @Autowired
     private WebApplicationContext context;
