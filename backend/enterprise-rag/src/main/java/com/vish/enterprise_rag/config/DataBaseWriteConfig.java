@@ -59,8 +59,6 @@ public class DataBaseWriteConfig {
             EntityManagerFactoryBuilder builder,
             @Qualifier("writeDataSource") DataSource dataSource) {
         Map<String, Object> properties = new HashMap<>();
-        properties.put("hibernate.hbm2ddl.auto", "validate");
-        properties.put("hibernate.dialect", "org.hibernate.dialect.PostgreSQLDialect");
         properties.put("hibernate.format_sql", "true");
         properties.put("hibernate.show_sql", "true");
 

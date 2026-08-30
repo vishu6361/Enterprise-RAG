@@ -24,7 +24,6 @@ public class UserReq {
     @NotBlank(message = "Email is required")
     private String email;
 
-    @NotNull(message = "Organization ID is required")
     private Long organizationId;
 
     @NotBlank(message = "Password is required")

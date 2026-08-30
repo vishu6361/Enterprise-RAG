@@ -23,7 +23,7 @@ import lombok.ToString;
     name = "document_permissions",
     uniqueConstraints = @UniqueConstraint(
         name = "uk_document_permissions_document_user",
-        columnNames = {"document_id", "user_id"}
+        columnNames = {"document_id", "user_id", "is_active"}
     )
 )
 @Data
